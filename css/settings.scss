@@ -1,0 +1,18 @@
+form#migration {
+	td.status {
+		width: 16px;
+		height: 16px;
+	}
+
+	tr.pending td.status {
+		background-color: yellow;
+	}
+
+	tr.ok td.status {
+		background-color: green;
+	}
+
+	tr.error td.status {
+		background-color: red;
+	}
+}

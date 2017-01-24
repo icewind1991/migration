@@ -18,6 +18,9 @@
 
 namespace OCA\Migration;
 
+use OC\Files\Storage\DAV;
+use OCP\Http\Client\IClientService;
+
 class Remote {
 	private $url;
 
@@ -25,15 +28,18 @@ class Remote {
 
 	private $password;
 
+	private $clientService;
+
 	/**
 	 * @param string $url
 	 * @param string $username
 	 * @param string $password
 	 */
-	public function __construct($url, $username, $password) {
+	public function __construct($url, $username, $password, IClientService $clientService) {
 		$this->url = $url;
 		$this->username = $username;
 		$this->password = $password;
+		$this->clientService = $clientService;
 	}
 
 	/**
@@ -55,5 +61,53 @@ class Remote {
 	 */
 	public function getPassword() {
 		return $this->password;
+	}
+
+	/**
+	 * @return array|null
+	 */
+	public function getRemoteStatus() {
+		try {
+			$response = $this->downloadStatus('https://' . $this->url . '/status.php');
+			$protocol = 'https';
+			if (!$response) {
+				$response = $this->downloadStatus('http://' . $this->url . '/status.php');
+				$protocol = 'http';
+			}
+			$status = json_decode($response, true);
+			if ($status) {
+				$status['protocol'] = $protocol;
+			}
+			return $status;
+		} catch (\Exception $e) {
+			return null;
+		}
+	}
+
+	private function downloadStatus($url) {
+		$request = $this->clientService->newClient()->get($url);
+		return $request->getBody();
+	}
+
+	public function checkCredentials() {
+		$storage = $this->getRemoteStorage();
+		if (!$storage) {
+			return false;
+		} else {
+			return $storage->test();
+		}
+	}
+
+	public function getRemoteStorage() {
+		$status = $this->getRemoteStatus();
+		if (!$status) {
+			return null;
+		}
+		return new DAV([
+			'host' => $this->getUrl() . '/remote.php/dav/files',
+			'secure' => ($status['protocol'] === 'https'),
+			'user' => $this->getUsername(),
+			'password' => $this->getPassword()
+		]);
 	}
 }
