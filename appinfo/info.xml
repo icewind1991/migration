@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>migration</id>
+	<name>Migration</name>
+	<summary>Migrate users between Nextcloud instances</summary>
+	<description>Allows migrating a user from a different Nextcloud instance</description>
+	<version>0.1.0</version>
+	<licence>AGPL</licence>
+	<author>Robin Appelman</author>
+	<namespace>Migration</namespace>
+
+	<category>tools</category>
+	<dependencies>
+		<nextcloud min-version="12" max-version="12"/>
+	</dependencies>
+</info>
