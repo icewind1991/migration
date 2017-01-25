@@ -40,15 +40,20 @@ class FileReceiverTest extends TestCase {
 	protected function setUp() {
 		parent::setUp();
 		$this->sourceStorage = $this->getMockBuilder(Temporary::class)
-			->setMethods(['getETag'])
+			->setMethods(['getETag', 'filemtime'])
 			->getMock();
 		$this->targetStorage = new Temporary();
 
-		// make sure we have persistent etags as a remote storage would have
+		// make sure we have persistent etags and modified dates as a remote storage would have
 		$this->sourceStorage->expects($this->any())
 			->method('getETag')
 			->willReturnCallback(function ($path) {
 				return md5(trim($path, '/'));
+			});
+		$this->sourceStorage->expects($this->any())
+			->method('filemtime')
+			->willReturnCallback(function ($path) {
+				return 100;
 			});
 
 		$this->fileReceiver = new FileReceiver($this->sourceStorage, $this->targetStorage);
@@ -75,6 +80,8 @@ class FileReceiverTest extends TestCase {
 		$targetCache = $this->targetStorage->getCache();
 		$this->assertEquals(md5('foo.txt'), $targetCache->get('foo.txt')->getEtag());
 		$this->assertEquals(md5('bar.txt'), $targetCache->get('bar.txt')->getEtag());
+		$this->assertEquals(100, $targetCache->get('foo.txt')->getMTime());
+		$this->assertEquals(100, $targetCache->get('bar.txt')->getMTime());
 	}
 
 	public function testCopyExistingDataOtherEtag() {

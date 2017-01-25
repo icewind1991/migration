@@ -10,5 +10,6 @@
 
 return ['routes' => [
 	['name' => 'settings#checkRemote', 'url' => '/check', 'verb' => 'GET'],
-	['name' => 'settings#checkCredentials', 'url' => '/check_credentials', 'verb' => 'POST']
+	['name' => 'settings#checkCredentials', 'url' => '/check_credentials', 'verb' => 'POST'],
+	['name' => 'settings#migrate', 'url' => '/migrate', 'verb' => 'GET'] // EventSource only supports GET
 ]];

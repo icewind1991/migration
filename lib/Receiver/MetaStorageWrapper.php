@@ -26,7 +26,7 @@ use OCP\Files\Storage\IStorage;
  *
  * This way we can trigger a scanner on the target storage while using the etags from the source storage
  */
-class EtagStorageWrapper extends Wrapper {
+class MetaStorageWrapper extends Wrapper {
 	/** @var  IStorage */
 	private $etagStorage;
 
@@ -42,6 +42,10 @@ class EtagStorageWrapper extends Wrapper {
 		return $this->etagStorage->getETag($path);
 	}
 
+	public function filemtime($path) {
+		return $this->etagStorage->filemtime($path);
+	}
+
 	/**
 	 * @param string $path
 	 * @return array
@@ -49,6 +53,7 @@ class EtagStorageWrapper extends Wrapper {
 	public function getMetaData($path) {
 		$meta = parent::getMetaData($path);
 		$meta['etag'] = $this->etagStorage->getETag($path);
+		$meta['mtime'] = $this->etagStorage->filemtime($path);
 		return $meta;
 	}
 }

@@ -31,11 +31,12 @@ class Remote {
 	private $clientService;
 
 	/**
-	 * @param string $url
-	 * @param string $username
+	 * @param string $cloudId
 	 * @param string $password
 	 */
-	public function __construct($url, $username, $password, IClientService $clientService) {
+	public function __construct($cloudId, $password, IClientService $clientService) {
+		//TODO better way to resolve cloud ids
+		list($username, $url) = explode('@', $cloudId);
 		$this->url = $url;
 		$this->username = $username;
 		$this->password = $password;
@@ -104,7 +105,7 @@ class Remote {
 			return null;
 		}
 		return new DAV([
-			'host' => $this->getUrl() . '/remote.php/dav/files',
+			'host' => $this->getUrl() . '/remote.php/files',
 			'secure' => ($status['protocol'] === 'https'),
 			'user' => $this->getUsername(),
 			'password' => $this->getPassword()

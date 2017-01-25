@@ -1,18 +1,31 @@
 form#migration {
-	td.status {
+	span.status {
+		display: block;
+		margin: 10px;
 		width: 16px;
 		height: 16px;
 	}
 
-	tr.pending td.status {
-		background-color: yellow;
+	tr.pending .status {
+		background-color: dimgray;
+		border-radius: 40%;
 	}
 
-	tr.ok td.status {
-		background-color: green;
+	tr.ok .status {
+		background: #37ce02;
+		border-radius: 50%;
 	}
 
-	tr.error td.status {
-		background-color: red;
+	tr.error .status {
+		background: #ce3702;
+	}
+
+	tr.indeterminate .status {
+		background: #e6db00;
+		border-radius: 40%;
+	}
+
+	input {
+		min-width: 200px;
 	}
 }

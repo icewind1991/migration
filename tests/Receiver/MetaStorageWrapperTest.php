@@ -19,26 +19,26 @@
 namespace OCA\Migration\Tests\Receiver;
 
 use OC\Files\Storage\Storage;
-use OCA\Migration\Receiver\EtagStorageWrapper;
+use OCA\Migration\Receiver\MetaStorageWrapper;
 use OCP\Files\Storage\IStorage;
 use Test\TestCase;
 
 \OC_App::loadApp('migration');
 
-class EtagStorageWrapperTest extends TestCase {
+class MetaStorageWrapperTest extends TestCase {
 	/** @var  IStorage|\PHPUnit_Framework_MockObject_MockObject */
 	private $sourceStorage;
 	/** @var  IStorage|\PHPUnit_Framework_MockObject_MockObject */
 	private $etagStorage;
 
-	/** @var  EtagStorageWrapper */
+	/** @var  MetaStorageWrapper */
 	private $storage;
 
 	public function setUp() {
 		parent::setUp();
 		$this->sourceStorage = $this->createMock(Storage::class);
 		$this->etagStorage = $this->createMock(Storage::class);
-		$this->storage = new EtagStorageWrapper([
+		$this->storage = new MetaStorageWrapper([
 			'storage' => $this->sourceStorage,
 			'etag_storage' => $this->etagStorage
 		]);
@@ -54,20 +54,35 @@ class EtagStorageWrapperTest extends TestCase {
 		$this->assertEquals('foo', $this->storage->getETag(''));
 	}
 
+	public function testGetMTime() {
+		$this->sourceStorage->expects($this->never())
+			->method('filemtime');
+		$this->etagStorage->expects($this->once())
+			->method('filemtime')
+			->willReturn(10);
+
+		$this->assertEquals(10, $this->storage->filemtime(''));
+	}
+
 	public function testGetMetadata() {
 		$this->sourceStorage->expects($this->once())
 			->method('getMetaData')
 			->willReturn([
 				'etag' => 'random',
-				'size' => 100
+				'size' => 100,
+				'mtime' => 150
 			]);
+		$this->etagStorage->expects($this->once())
+			->method('filemtime')
+			->willReturn(50);
 		$this->etagStorage->expects($this->once())
 			->method('getETag')
 			->willReturn('foo');
 
 		$this->assertEquals([
 			'etag' => 'foo',
-			'size' => 100
+			'size' => 100,
+			'mtime' => 50
 		], $this->storage->getMetaData(''));
 	}
 }

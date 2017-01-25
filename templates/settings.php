@@ -14,10 +14,11 @@ style('migration', 'settings');
 				<label for="migration_cloudid"><?php p($l->t('Remote cloud id')); ?></label>
 			</td>
 			<td>
-				<input id="migration_cloudid" name="cloudid" placeholder="<?php p($l->t('me@example.com')); ?>"/>
+				<input id="migration_cloudid" name="cloudid"
+					   placeholder="<?php p($l->t('me@example.com')); ?>"/>
 			</td>
-			<td class="status">
-
+			<td>
+				<span class="status"/>
 			</td>
 		</tr>
 		<tr>
@@ -25,10 +26,16 @@ style('migration', 'settings');
 				<label for="migration_password"><?php p($l->t('Remote password')); ?></label>
 			</td>
 			<td>
-				<input id="migration_password" autocomplete="new-password"  name="password" type="password"/>
+				<input id="migration_password" autocomplete="new-password"
+					   name="password" type="password"/>
 			</td>
-			<td class="status">
-
+			<td>
+				<span class="status spinner"/>
+			</td>
+		</tr>
+		<tr>
+			<td>
+				<input type="button" disabled id="migration_migrate" value="<?php p($l->t('Migrate')); ?>"/>
 			</td>
 		</tr>
 	</table>

@@ -18,24 +18,26 @@
 
 namespace OCA\Migration\Receiver;
 
+use OC\Files\Cache\Cache;
+use OC\Hooks\BasicEmitter;
 use OCP\Files\Cache\ICacheEntry;
 use OCP\Files\Cache\IScanner;
 use OCP\Files\Storage\IStorage;
 
-class FileReceiver {
+class FileReceiver extends BasicEmitter {
 	/** @var IStorage */
 	private $sourceStorage;
 
 	/** @var IStorage */
 	private $targetStorage;
 
-	/** @var EtagStorageWrapper  */
-	private $etagStorage;
+	/** @var MetaStorageWrapper */
+	private $reuseMetaStorage;
 
 	public function __construct(IStorage $sourceStorage, IStorage $targetStorage) {
 		$this->sourceStorage = $sourceStorage;
 		$this->targetStorage = $targetStorage;
-		$this->etagStorage = new EtagStorageWrapper([
+		$this->reuseMetaStorage = new MetaStorageWrapper([
 			'storage' => $this->targetStorage,
 			'etag_storage' => $this->sourceStorage
 		]);
@@ -60,8 +62,12 @@ class FileReceiver {
 			$this->copyFolder($subPath);
 		}
 
-		$this->targetStorage->getCache()->put(trim($path, '/'), [
-			'etag' => $this->sourceStorage->getETag($path)
+		/** @var Cache $cache */
+		$cache = $this->targetStorage->getCache();
+		$cache->calculateFolderSize($path);
+		$cache->put($path, [
+			'etag' => $this->sourceStorage->getETag($path),
+			'mtime' => $this->sourceStorage->filemtime($path)
 		]);
 	}
 
@@ -73,7 +79,7 @@ class FileReceiver {
 		$subFolders = [];
 		$files = $this->getFilesToCopy($path);
 		foreach ($files as $file) {
-			$fullPath = $path . '/' . $file;
+			$fullPath = trim($path . '/' . $file, '/');
 			if ($this->sourceStorage->is_dir($fullPath)) {
 				if (!$this->targetStorage->is_dir($fullPath)) {
 					$this->targetStorage->mkdir($fullPath);
@@ -82,7 +88,8 @@ class FileReceiver {
 			} else {
 				$this->targetStorage->copyFromStorage($this->sourceStorage, $fullPath, $fullPath);
 				// scan files with the source etag
-				$this->etagStorage->getScanner()->scanFile($fullPath, IScanner::REUSE_NONE);
+				$this->reuseMetaStorage->getScanner()->scanFile($fullPath, IScanner::REUSE_NONE);
+				$this->emit('File', 'copied');
 			}
 		}
 		return $subFolders;

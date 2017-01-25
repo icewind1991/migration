@@ -18,17 +18,24 @@
 
 namespace OCA\Migration\Controller;
 
+use OCA\Migration\Migrator;
 use OCA\Migration\Remote;
 use OCP\AppFramework\Controller;
+use OCP\Files\Folder;
 use OCP\Http\Client\IClientService;
+use OCP\IL10N;
 use OCP\IRequest;
 
 class SettingsController extends Controller {
 	private $clientService;
+	private $userFolder;
+	private $l10n;
 
-	public function __construct($appName, IRequest $request, IClientService $clientService) {
+	public function __construct($appName, IRequest $request, IClientService $clientService, Folder $userFolder, IL10N $l10n) {
 		parent::__construct($appName, $request);
 		$this->clientService = $clientService;
+		$this->userFolder = $userFolder;
+		$this->l10n = $l10n;
 	}
 
 	/**
@@ -37,9 +44,7 @@ class SettingsController extends Controller {
 	 * @return array|null
 	 */
 	public function checkRemote($remoteCloudId) {
-		//TODO better way to resolve cloud ids
-		list($user, $host) = explode('@', $remoteCloudId);
-		$remote = new Remote($host, $user, '', $this->clientService);
+		$remote = new Remote($remoteCloudId, '', $this->clientService);
 		return $remote->getRemoteStatus();
 	}
 
@@ -50,9 +55,42 @@ class SettingsController extends Controller {
 	 * @return bool
 	 */
 	public function checkCredentials($remoteCloudId, $remotePassword) {
-		//TODO better way to resolve cloud ids
-		list($user, $host) = explode('@', $remoteCloudId);
-		$remote = new Remote($host, $user, $remotePassword, $this->clientService);
+		$remote = new Remote($remoteCloudId, $remotePassword, $this->clientService);
 		return $remote->checkCredentials();
+	}
+
+	/**
+	 * @NoAdminRequired
+	 * @NoCSRFRequired
+	 * @param string $remoteCloudId
+	 * @param string $remotePassword
+	 */
+	public function migrate($remoteCloudId, $remotePassword) {
+		$remote = new Remote($remoteCloudId, $remotePassword, $this->clientService);
+		$migrator = new Migrator($remote, $this->userFolder);
+		$eventSource = \OC::$server->createEventSource();
+
+		$eventSource->send('progress', [
+			'step' => 'files',
+			'progress' => 0,
+			'description' => $this->l10n->t('Copying files...')
+		]);
+
+		$migrator->listen('Migrator', 'progress', function ($step, $progress) use ($eventSource) {
+			$eventSource->send('progress', [
+				'step' => $step,
+				'progress' => $progress,
+				'description' => $this->l10n->t('Copying files... (%d files copied)', [$progress])
+			]);
+		});
+
+		try {
+			$migrator->migrate();
+			$eventSource->send('done', 'done');
+		} catch (\Exception $e) {
+			$eventSource->send('error', $e->getMessage());
+		}
+
+		$eventSource->close();
 	}
 }
