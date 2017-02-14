@@ -79,10 +79,10 @@ $(document).ready(function () {
 				checkCloudId(cloudId).then(function (result) {
 					if (result && result.installed) {
 						var majorVersion = parseInt(result.version, 10);
-						if (majorVersion >= 12) {
-							setCloudIdStatus('ok', '');
-						} else if (result.protocol === 'http') {
+						if (result.protocol === 'http') {
 							setCloudIdStatus('indeterminate', t('migration', 'Insecure connection'));
+						} else if (majorVersion >= 12) {
+							setCloudIdStatus('ok', '');
 						} else {
 							setCloudIdStatus('error', t('migration', 'Nextcloud 11 and lower are not supported for migration'));
 						}
