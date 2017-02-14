@@ -86,8 +86,12 @@ class Remote {
 	}
 
 	private function downloadStatus($url) {
-		$request = $this->clientService->newClient()->get($url);
-		return $request->getBody();
+		try {
+			$request = $this->clientService->newClient()->get($url);
+			return $request->getBody();
+		} catch (\Exception $e) {
+			return false;
+		}
 	}
 
 	public function checkCredentials() {
