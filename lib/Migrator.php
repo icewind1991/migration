@@ -20,19 +20,29 @@ namespace OCA\Migration;
 
 use OC\Files\Storage\Wrapper\Jail;
 use OC\Hooks\BasicEmitter;
+use OCA\Migration\APIClient\Share;
+use OCA\Migration\Receiver\FederatedShareReceiver;
 use OCA\Migration\Receiver\FileReceiver;
+use OCP\Federation\ICloudId;
 use OCP\Files\Folder;
 use OCP\Files\IHomeStorage;
+use OCP\Http\Client\IClientService;
 
 class Migrator extends BasicEmitter {
 	/** @var  Remote */
 	private $remote;
 	/** @var Folder */
 	private $userFolder;
+	/** @var IClientService */
+	private $clientService;
+	/** @var ICloudId */
+	private $targetUser;
 
-	public function __construct(Remote $remote, Folder $userFolder) {
+	public function __construct(Remote $remote, Folder $userFolder, IClientService $clientService, ICloudId $targetUser) {
 		$this->remote = $remote;
 		$this->userFolder = $userFolder;
+		$this->clientService = $clientService;
+		$this->targetUser = $targetUser;
 	}
 
 	public function migrate() {
@@ -60,5 +70,16 @@ class Migrator extends BasicEmitter {
 		});
 
 		$fileMigrator->copyFiles();
+
+		$shareApiClient = new Share($this->clientService, $this->remote);
+		$federatedShareReceiver = new FederatedShareReceiver($this->targetUser, $shareApiClient, $this->clientService);
+
+		$shareCount = 0;
+		$federatedShareReceiver->listen('FederatedShare', 'copied', function () use (&$shareCount) {
+			$shareCount++;
+			$this->emit('Migrator', 'progress', ['federated_shares', $shareCount]);
+		});
+
+		$federatedShareReceiver->copyShares();
 	}
 }

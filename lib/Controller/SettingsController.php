@@ -21,21 +21,38 @@ namespace OCA\Migration\Controller;
 use OCA\Migration\Migrator;
 use OCA\Migration\Remote;
 use OCP\AppFramework\Controller;
+use OCP\Federation\ICloudIdManager;
 use OCP\Files\Folder;
 use OCP\Http\Client\IClientService;
 use OCP\IL10N;
 use OCP\IRequest;
+use OCP\IURLGenerator;
+use OCP\IUserSession;
 
 class SettingsController extends Controller {
 	private $clientService;
 	private $userFolder;
 	private $l10n;
+	private $cloudIdManager;
+	private $userSession;
+	private $urlGenerator;
 
-	public function __construct($appName, IRequest $request, IClientService $clientService, Folder $userFolder, IL10N $l10n) {
+	public function __construct($appName,
+								IRequest $request,
+								IClientService $clientService,
+								Folder $userFolder,
+								IL10N $l10n,
+								ICloudIdManager $cloudIdManager,
+								IUserSession $userSession,
+								IURLGenerator $urlGenerator
+	) {
 		parent::__construct($appName, $request);
 		$this->clientService = $clientService;
 		$this->userFolder = $userFolder;
 		$this->l10n = $l10n;
+		$this->cloudIdManager = $cloudIdManager;
+		$this->userSession = $userSession;
+		$this->urlGenerator = $urlGenerator;
 	}
 
 	/**
@@ -44,7 +61,7 @@ class SettingsController extends Controller {
 	 * @return array|null
 	 */
 	public function checkRemote($remoteCloudId) {
-		$remote = new Remote($remoteCloudId, '', $this->clientService);
+		$remote = new Remote($this->cloudIdManager->resolveCloudId($remoteCloudId), '', $this->clientService);
 		return $remote->getRemoteStatus();
 	}
 
@@ -55,7 +72,7 @@ class SettingsController extends Controller {
 	 * @return bool
 	 */
 	public function checkCredentials($remoteCloudId, $remotePassword) {
-		$remote = new Remote($remoteCloudId, $remotePassword, $this->clientService);
+		$remote = new Remote($this->cloudIdManager->resolveCloudId($remoteCloudId), $remotePassword, $this->clientService);
 		return $remote->checkCredentials();
 	}
 
@@ -66,21 +83,22 @@ class SettingsController extends Controller {
 	 * @param string $remotePassword
 	 */
 	public function migrate($remoteCloudId, $remotePassword) {
-		$remote = new Remote($remoteCloudId, $remotePassword, $this->clientService);
-		$migrator = new Migrator($remote, $this->userFolder);
+		$remote = new Remote($this->cloudIdManager->resolveCloudId($remoteCloudId), $remotePassword, $this->clientService);
+		$targetUser = $this->cloudIdManager->getCloudId($this->userSession->getUser()->getUID(), $this->urlGenerator->getAbsoluteURL('/'));
+		$migrator = new Migrator($remote, $this->userFolder, $this->clientService, $targetUser);
 		$eventSource = \OC::$server->createEventSource();
 
 		$eventSource->send('progress', [
 			'step' => 'files',
 			'progress' => 0,
-			'description' => $this->l10n->t('Copying files...')
+			'description' => $this->l10n->t('Copying data...')
 		]);
 
 		$migrator->listen('Migrator', 'progress', function ($step, $progress) use ($eventSource) {
 			$eventSource->send('progress', [
 				'step' => $step,
 				'progress' => $progress,
-				'description' => $this->l10n->t('Copying files... (%d files copied)', [$progress])
+				'description' => $this->formatProgress($step, $progress)
 			]);
 		});
 
@@ -92,5 +110,16 @@ class SettingsController extends Controller {
 		}
 
 		$eventSource->close();
+	}
+
+	private function formatProgress($step, $progress) {
+		switch ($step) {
+			case 'files':
+				return $this->l10n->t('Copying files... (%d files copied)', [$progress]);
+			case 'federated_shares':
+				return $this->l10n->t('Copying federated shares... (%d shares copied)', [$progress]);
+			default:
+				return $this->l10n->t('Copying...');
+		}
 	}
 }

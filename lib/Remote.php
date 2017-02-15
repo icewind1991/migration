@@ -19,26 +19,24 @@
 namespace OCA\Migration;
 
 use OC\Files\Storage\DAV;
+use OCA\Migration\Storage\RemoteCloudStorage;
+use OCP\Federation\ICloudId;
 use OCP\Http\Client\IClientService;
 
 class Remote {
-	private $url;
-
-	private $username;
+	private $cloudId;
 
 	private $password;
 
 	private $clientService;
 
 	/**
-	 * @param string $cloudId
+	 * @param ICloudId $cloudId
 	 * @param string $password
+	 * @param IClientService $clientService
 	 */
-	public function __construct($cloudId, $password, IClientService $clientService) {
-		//TODO better way to resolve cloud ids
-		list($username, $url) = explode('@', $cloudId);
-		$this->url = $url;
-		$this->username = $username;
+	public function __construct(ICloudId $cloudId, $password, IClientService $clientService) {
+		$this->cloudId = $cloudId;
 		$this->password = $password;
 		$this->clientService = $clientService;
 	}
@@ -47,14 +45,14 @@ class Remote {
 	 * @return string
 	 */
 	public function getUrl() {
-		return $this->url;
+		return $this->cloudId->getRemote();
 	}
 
 	/**
 	 * @return string
 	 */
 	public function getUsername() {
-		return $this->username;
+		return $this->cloudId->getUser();
 	}
 
 	/**
@@ -69,10 +67,10 @@ class Remote {
 	 */
 	public function getRemoteStatus() {
 		try {
-			$response = $this->downloadStatus('https://' . $this->url . '/status.php');
+			$response = $this->downloadStatus('https://' . $this->getUrl() . '/status.php');
 			$protocol = 'https';
 			if (!$response) {
-				$response = $this->downloadStatus('http://' . $this->url . '/status.php');
+				$response = $this->downloadStatus('http://' . $this->getUrl() . '/status.php');
 				$protocol = 'http';
 			}
 			$status = json_decode($response, true);
@@ -108,11 +106,18 @@ class Remote {
 		if (!$status) {
 			return null;
 		}
-		return new DAV([
+		return new RemoteCloudStorage([
 			'host' => $this->getUrl() . '/remote.php/files',
 			'secure' => ($status['protocol'] === 'https'),
 			'user' => $this->getUsername(),
 			'password' => $this->getPassword()
 		]);
+	}
+
+	/**
+	 * @return ICloudId
+	 */
+	public function getCloudId() {
+		return $this->cloudId;
 	}
 }

@@ -57,7 +57,7 @@ $(document).ready(function () {
 			span.tooltip('destroy');
 		}
 
-		if (!working && cloudIdRow.hasClass('ok') && passwordRow.hasClass('ok')) {
+		if (!working && (cloudIdRow.hasClass('ok') || cloudIdRow.hasClass('indeterminate')) && passwordRow.hasClass('ok')) {
 			migrateButton.attr('disabled', null);
 		} else {
 			migrateButton.attr('disabled', 'disabled');
