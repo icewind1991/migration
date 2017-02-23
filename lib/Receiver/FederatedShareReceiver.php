@@ -23,8 +23,10 @@ namespace OCA\Migration\Receiver;
 
 use Guzzle\Http\Exception\RequestException;
 use OC\Hooks\BasicEmitter;
+use OCA\Files_Sharing\External\Manager;
 use OCA\Migration\APIClient\Share;
 use OCP\Federation\ICloudId;
+use OCP\Files\Folder;
 use OCP\Http\Client\IClientService;
 
 class FederatedShareReceiver extends BasicEmitter {
@@ -39,15 +41,30 @@ class FederatedShareReceiver extends BasicEmitter {
 	/** @var IClientService */
 	private $clientService;
 
+	/** @var Manager */
+	private $externalShareManager;
+
+	/** @var Folder */
+	private $userFolder;
+
 	/**
 	 * @param ICloudId $targetUser
 	 * @param Share $shareApiClient
 	 * @param IClientService $clientService
+	 * @param Manager $externalShareManager
+	 * @param Folder $userFolder
 	 */
-	public function __construct(ICloudId $targetUser, Share $shareApiClient, IClientService $clientService) {
+	public function __construct(ICloudId $targetUser,
+								Share $shareApiClient,
+								IClientService $clientService,
+								Manager $externalShareManager,
+								Folder $userFolder
+	) {
 		$this->shareApiClient = $shareApiClient;
 		$this->targetUser = $targetUser;
 		$this->clientService = $clientService;
+		$this->externalShareManager = $externalShareManager;
+		$this->userFolder = $userFolder;
 	}
 
 	public function copyShares() {
@@ -73,6 +90,39 @@ class FederatedShareReceiver extends BasicEmitter {
 					'remote' => $share['remote'],
 					'name' => $share['name']
 				]);
+			}
+		}
+
+		$keys = array_map(function ($share) {
+			return $share['name'] . '::' . $share['remote'];
+		}, $shares);
+		$mountPoints = array_map(function ($share) {
+			return $share['mountpoint'];
+		}, $shares);
+
+		$mountPointMap = array_combine($keys, $mountPoints);
+
+		$openShares = $this->externalShareManager->getOpenShares();
+		foreach ($openShares as $openShare) {
+			$key = $openShare['name'] . '::' . $openShare['remote'];
+			// check if it's a migrated share
+			if (isset($mountPointMap[$key])) {
+				$this->externalShareManager->acceptShare($openShare['id']);
+			}
+		}
+
+		$acceptedShares = $this->externalShareManager->getAcceptedShares();
+
+		foreach ($acceptedShares as $acceptedShare) {
+			$key = $acceptedShare['name'] . '::' . $acceptedShare['remote'];
+			if (isset($mountPointMap[$key])) {
+				$targetMountPoint = $mountPointMap[$key];
+				if ($targetMountPoint !== $acceptedShare['mountpoint']) {
+					$this->externalShareManager->setMountPoint(
+						$this->userFolder->getFullPath($acceptedShare['mountpoint']),
+						$this->userFolder->getFullPath($targetMountPoint)
+					);
+				}
 			}
 		}
 	}

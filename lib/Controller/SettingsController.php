@@ -18,6 +18,7 @@
 
 namespace OCA\Migration\Controller;
 
+use OCA\Files_Sharing\External\Manager;
 use OCA\Migration\Migrator;
 use OCA\Migration\Remote;
 use OCP\AppFramework\Controller;
@@ -36,7 +37,21 @@ class SettingsController extends Controller {
 	private $cloudIdManager;
 	private $userSession;
 	private $urlGenerator;
+	private $externalShareManager;
 
+	/**
+	 * SettingsController constructor.
+	 *
+	 * @param string $appName
+	 * @param IRequest $request
+	 * @param IClientService $clientService
+	 * @param Folder $userFolder
+	 * @param IL10N $l10n
+	 * @param ICloudIdManager $cloudIdManager
+	 * @param IUserSession $userSession
+	 * @param IURLGenerator $urlGenerator
+	 * @param Manager $externalShareManager
+	 */
 	public function __construct($appName,
 								IRequest $request,
 								IClientService $clientService,
@@ -44,7 +59,8 @@ class SettingsController extends Controller {
 								IL10N $l10n,
 								ICloudIdManager $cloudIdManager,
 								IUserSession $userSession,
-								IURLGenerator $urlGenerator
+								IURLGenerator $urlGenerator,
+								Manager $externalShareManager
 	) {
 		parent::__construct($appName, $request);
 		$this->clientService = $clientService;
@@ -53,6 +69,7 @@ class SettingsController extends Controller {
 		$this->cloudIdManager = $cloudIdManager;
 		$this->userSession = $userSession;
 		$this->urlGenerator = $urlGenerator;
+		$this->externalShareManager = $externalShareManager;
 	}
 
 	/**
@@ -85,7 +102,7 @@ class SettingsController extends Controller {
 	public function migrate($remoteCloudId, $remotePassword) {
 		$remote = new Remote($this->cloudIdManager->resolveCloudId($remoteCloudId), $remotePassword, $this->clientService);
 		$targetUser = $this->cloudIdManager->getCloudId($this->userSession->getUser()->getUID(), $this->urlGenerator->getAbsoluteURL('/'));
-		$migrator = new Migrator($remote, $this->userFolder, $this->clientService, $targetUser);
+		$migrator = new Migrator($remote, $this->userFolder, $this->clientService, $targetUser, $this->externalShareManager);
 		$eventSource = \OC::$server->createEventSource();
 
 		$eventSource->send('progress', [

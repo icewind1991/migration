@@ -15,3 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
  */
+
+namespace OCA\Migration\AppInfo;
+
+use OC\AppFramework\Utility\SimpleContainer;
+use OCA\Files_Sharing\External\Manager;
+use OCP\AppFramework\App;
+
+class Application extends App {
+	public function __construct(array $urlParams = array()) {
+		parent::__construct('migration', $urlParams);
+
+		$container = $this->getContainer();
+		$server = $container->getServer();
+
+		$container->registerService(Manager::class, function(SimpleContainer $c) use ($server) {
+			return $server->query(Manager::class);
+		});
+	}
+}
