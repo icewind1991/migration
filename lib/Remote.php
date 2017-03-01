@@ -30,6 +30,8 @@ class Remote {
 
 	private $clientService;
 
+	private $status = false;
+
 	/**
 	 * @param ICloudId $cloudId
 	 * @param string $password
@@ -45,7 +47,7 @@ class Remote {
 	 * @return string
 	 */
 	public function getUrl() {
-		return $this->cloudId->getRemote();
+		return str_replace('https://', '', str_replace('http://', '', $this->cloudId->getRemote()));
 	}
 
 	/**
@@ -66,21 +68,24 @@ class Remote {
 	 * @return array|null
 	 */
 	public function getRemoteStatus() {
-		try {
-			$response = $this->downloadStatus('https://' . $this->getUrl() . '/status.php');
-			$protocol = 'https';
-			if (!$response) {
-				$response = $this->downloadStatus('http://' . $this->getUrl() . '/status.php');
-				$protocol = 'http';
+		if ($this->status === false) {
+			try {
+				$response = $this->downloadStatus('https://' . $this->getUrl() . '/status.php');
+				$protocol = 'https';
+				if (!$response) {
+					$response = $this->downloadStatus('http://' . $this->getUrl() . '/status.php');
+					$protocol = 'http';
+				}
+				$status = json_decode($response, true);
+				if ($status) {
+					$status['protocol'] = $protocol;
+				}
+				$this->status = $status;
+			} catch (\Exception $e) {
+				$this->status = null;
 			}
-			$status = json_decode($response, true);
-			if ($status) {
-				$status['protocol'] = $protocol;
-			}
-			return $status;
-		} catch (\Exception $e) {
-			return null;
 		}
+		return $this->status;
 	}
 
 	private function downloadStatus($url) {

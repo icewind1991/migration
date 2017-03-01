@@ -78,6 +78,7 @@ class Migrator extends BasicEmitter {
 			}
 		});
 
+		$this->emit('Migrator', 'step', ['files']);
 		$fileMigrator->copyFiles();
 
 		$shareApiClient = new Share($this->clientService, $this->remote);
@@ -89,6 +90,7 @@ class Migrator extends BasicEmitter {
 			$this->emit('Migrator', 'progress', ['federated_shares', $shareCount]);
 		});
 
+		$this->emit('Migrator', 'step', ['federated_shares']);
 		$federatedShareReceiver->copyShares();
 	}
 }

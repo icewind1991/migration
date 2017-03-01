@@ -14,4 +14,8 @@
 	<dependencies>
 		<nextcloud min-version="12" max-version="12"/>
 	</dependencies>
+
+	<commands>
+		<command>OCA\Migration\Command\MigrateCommand</command>
+	</commands>
 </info>
