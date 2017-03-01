@@ -2,13 +2,27 @@
 
 Allow migrating users between Nextcloud instances
 
+## Usage
+
+### Web interface
+
+Any user can trigger migration for it self from the Personal settings in the web interface
+
+### CLI
+
+An admin can trigger migration for any user with an `occ` command
+
+```
+occ migration:migrate targetUser sourceUser@remotecloud.com
+```
+
+The password for the remote users will be asked by the `occ` command
+
 ## TODO
 
-- Verify that the target server can receive fed. shares
-- Update fed. share sources for fed. shares owned by the migrated user
- - Add api to change fed. share source
- - Warn if fed. share servers don't support changing owner server
+- Add option to send new fed. shares for existing outgoing fed. shares on the source server
+ - Warning that shares have to be re-accepted
 - Allow apps to hook into migration
- - Hook just provides migration meta-data (source host, user, pass) no full fledge api is provided
+ - Hook just provides migration meta-data (source host, user, pass) no full fledged api is provided
  - Warn about apps that don't support migration
  - Warn about apps not installed on target server
