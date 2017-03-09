@@ -25,6 +25,7 @@ use OCP\AppFramework\Controller;
 use OCP\Federation\ICloudIdManager;
 use OCP\Files\Folder;
 use OCP\Http\Client\IClientService;
+use OCP\IDBConnection;
 use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IURLGenerator;
@@ -38,6 +39,7 @@ class SettingsController extends Controller {
 	private $userSession;
 	private $urlGenerator;
 	private $externalShareManager;
+	private $connection;
 
 	/**
 	 * SettingsController constructor.
@@ -60,7 +62,8 @@ class SettingsController extends Controller {
 								ICloudIdManager $cloudIdManager,
 								IUserSession $userSession,
 								IURLGenerator $urlGenerator,
-								Manager $externalShareManager
+								Manager $externalShareManager,
+								IDBConnection $connection
 	) {
 		parent::__construct($appName, $request);
 		$this->clientService = $clientService;
@@ -70,6 +73,7 @@ class SettingsController extends Controller {
 		$this->userSession = $userSession;
 		$this->urlGenerator = $urlGenerator;
 		$this->externalShareManager = $externalShareManager;
+		$this->connection = $connection;
 	}
 
 	/**
@@ -102,7 +106,7 @@ class SettingsController extends Controller {
 	public function migrate($remoteCloudId, $remotePassword) {
 		$remote = new Remote($this->cloudIdManager->resolveCloudId($remoteCloudId), $remotePassword, $this->clientService);
 		$targetUser = $this->cloudIdManager->getCloudId($this->userSession->getUser()->getUID(), $this->urlGenerator->getAbsoluteURL('/'));
-		$migrator = new Migrator($remote, $this->userFolder, $this->clientService, $targetUser, $this->externalShareManager);
+		$migrator = new Migrator($remote, $this->userFolder, $this->clientService, $targetUser, $this->externalShareManager, $this->connection, $this->cloudIdManager);
 		$eventSource = \OC::$server->createEventSource();
 
 		$eventSource->send('progress', [

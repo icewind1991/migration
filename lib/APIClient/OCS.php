@@ -32,7 +32,11 @@ class OCS extends Base {
 		$this->baseUrl = 'ocs/v1.php/' . trim($baseUrl, '/');
 	}
 
-	protected function get($url, $query = []) {
+	protected function get($url, array $query = []) {
 		return parent::get($this->baseUrl . '/' . $url, $query);
+	}
+
+	protected function delete($url, array $query = []) {
+		return parent::delete($this->baseUrl . '/' . $url, $query);
 	}
 }

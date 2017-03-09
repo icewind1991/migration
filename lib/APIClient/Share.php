@@ -36,4 +36,29 @@ class Share extends OCS {
 		}
 		return $result['ocs']['data'];
 	}
+
+	public function listOutgoingFederatedShares() {
+		$result = json_decode($this->get('shares'), true);
+		if (!$result || !isset($result['ocs']) || !isset($result['ocs']['meta']) || $result['ocs']['meta']['status'] !== 'ok') {
+			throw new \Exception('Failed to list federated shares');
+		}
+		return array_filter($result['ocs']['data'], function($share) {
+			return $share['share_type'] === 6;
+		});
+	}
+
+	public function revokeShare($id, $token) {
+		$httpClient = $this->getHttpClient();
+		$httpClient->post(trim($this->remote->getCloudId()->getRemote(), '/') . '/ocs/v1.php/cloud/shares/' . $id . '/revoke',
+			[
+				'body' => [
+					'token' => $token
+				],
+				'headers' => [
+					'OCS-APIREQUEST' => 'true'
+				],
+				'connect_timeout' => 10,
+			]
+		);
+	}
 }

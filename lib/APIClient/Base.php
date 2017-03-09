@@ -29,7 +29,7 @@ class Base {
 	private $clientService;
 
 	/** @var Remote */
-	private $remote;
+	protected $remote;
 
 	/**
 	 * Base constructor.
@@ -46,9 +46,22 @@ class Base {
 		return $this->clientService->newClient();
 	}
 
-	protected function get($url, $query = []) {
+	protected function get($url, array $query = []) {
 		$client = $this->getHttpClient();
 		$response = $client->get(trim($this->remote->getUrl(), '/') . '/' . $url, [
+			'query' => $query,
+			'headers' => [
+				'OCS-APIREQUEST' => 'true',
+				'Accept' => 'application/json'
+			],
+			'auth' => [$this->remote->getUsername(), $this->remote->getPassword()]
+		]);
+		return $response->getBody();
+	}
+
+	protected function delete($url, array $query = []) {
+		$client = $this->getHttpClient();
+		$response = $client->delete(trim($this->remote->getUrl(), '/') . '/' . $url, [
 			'query' => $query,
 			'headers' => [
 				'OCS-APIREQUEST' => 'true',
